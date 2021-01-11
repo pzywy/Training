@@ -262,7 +262,24 @@ function radnomPick(array)
     let choice = Math.floor(Math.random()*array.length);
     return array[choice];
 }
+//find routes:
+function findRoute(graph,from,to)
+{
+    let work = [{at: from, route: []}];
+    for(let i = 0; i < work.length; i++)
+    {
+        let {at, route} = work [i];
+        for (let place of graph[at])
+        {
+            if (place == to) return route.concat(place);
 
+            if (!work.some(w => w.at == place))
+            {
+                work.push({at: place, route: route.concat(place)});
+            }
+        }
+    }
+}
 //Robot Strategies:
 function randomRobot(state)
 {
@@ -271,13 +288,31 @@ function randomRobot(state)
 
 function routeRobot(state,memory)
         {
-            if(memory.length ==0)
+            if(memory.length == 0)
             {
                 memory=mailRoute;
             }
-            return {directin:memory[0], memory:memory.slice(1)};
+            return {direction:memory[0], memory:memory.slice(1)};
         }
 
+function goalOrientedRobot({place, parcels},route)
+{
+    if(!route){route=[];}
+    if(route.length==0)
+    {
+        let parcel = parcels[0];
+
+        if(parcel.place != place)
+        {
+            route = findRoute(roadGraph,place,parcel.place);
+        }
+        else
+        {
+            route = findRoute(roadGraph, place, parcel.adress);
+        }
+    }
+    return {direction:route[0], memory:route.slice(1)};
+}
 
 //Create random delivery schedule:
 VillageState.random = function(parcelCount = 5)
@@ -302,15 +337,16 @@ VillageState.random = function(parcelCount = 5)
     return randomVillage;
 }
 
-
+//route to pass through every place
 const mailRoute = [
     "Dom Alicji", "Chata", "Dom Alicji", "Dom Bartka",
-    "Ratusz", "Dom Darii", "Dom Erniego",
+    "Ratusz", "Dom Darii", "Dom Ernesta",
     "Dom Grety", "Sklep", "Dom Grety", "Farma",
     "Rynek", "Poczta"
 ];
 
 
 //start Delivery:
-runRobot(VillageState.random(6), randomRobot);
-
+//runRobot(VillageState.random(6), randomRobot);
+// runRobot(VillageState.random(5), routeRobot,mailRoute);
+runRobot(VillageState.random(5), goalOrientedRobot);

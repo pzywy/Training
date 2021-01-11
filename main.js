@@ -35,7 +35,7 @@ function FizzBuzz()
     }
 }
 
-
+// Console to html
 (function (logger) {
     console.old = console.log;
     console.log = function () {
@@ -80,6 +80,7 @@ document.querySelector('.insert').addEventListener('keyup', function (e) {
 
 class Vec 
 {
+    //### Vector Class
     constructor(x,y)
     {
         this.x=x;
@@ -104,9 +105,14 @@ class Vec
 
 class Group
 {
+    //#################
+    //  Group that keeps only one same value at the time 
+    //
+    //################
     constructor()
     {
         this.Content=[];
+        this.i = 0;
     }
 
     add(stuff) 
@@ -134,6 +140,7 @@ class Group
         {
             let index = this.Content.indexOf(stuff);
             this.Content.splice(index,1);
+            return this.Content;
         }
         else
         {
@@ -141,5 +148,169 @@ class Group
         }
     }
     
+    //create group form array for example
+    static form(object)
+    {
+        console.log(object);
+        let newGroup = new Group();
+        object.forEach(element => newGroup.add(element));
+            
+        
+        return newGroup;
+    }
+    //Iterator
+    next()
+    {
+        if(this.i == this.Content.length) return {done: true};
+        let value = this.Content[this.i];
+        this.i++;
+        return {value, done:false};
 
+    }
+}   
+
+
+// Projekt Robot z książki
+
+//possible routes:
+const roads = [
+    "Dom Alicji-Dom Bartka", "Dom Alicji-Chata",
+    "Dom Alicji-Poczta", "Dom Bartka-Ratusz",
+    "Dom Darii-Dom Ernesta", "Dom Darii-Ratusz",
+    "Dom Ernesta-Dom Grety", "Dom Grety-Farma",
+    "Dom Grety-Sklep", "Rynek-Farma",
+    "Rynek-Poczta", "Rynek-Sklep",
+    "Rynek-Ratusz", "Sklep-Ratusz"
+];
+
+//create graph with conections:
+function buildGraph(edges)
+{
+    let graph = Object.create(null);
+    function addEdge(from, to)
+    {
+        if(graph[from]==null)
+        {
+            graph[from]=[to];
+        }
+        else
+        {
+            graph[from].push(to);
+        }
+    }
+
+    for (let [from,to] of edges.map(r => r.split('-')))
+    {
+        addEdge(from,to);
+        addEdge(to, from);
+    }
+    return graph;
 }
+
+const roadGraph = buildGraph(roads);
+
+//village object
+class VillageState
+{
+    constructor(place,parcels)
+    {
+        this.place = place;
+        this.parcels = parcels;
+    }
+
+    move(destination)
+    {
+        if(!roadGraph[this.place].includes(destination))
+        {
+            return this;
+        }
+        else
+        {
+            let parcels = this.parcels.map(p => {
+                if(p.place != this.place)   return p;
+                if(destination==p.adress) console.log(`dostarczono do ${p.adress}`);
+                return {place: destination, adress: p.adress};
+            }).filter(p => p.place != p.adress);
+            return new VillageState(destination,parcels);
+        }
+    }
+}
+
+//start robot 
+function runRobot(state,robot,memory)
+{
+    for(let turn=0;;turn++)
+    {
+        if(state.parcels.length==0)
+        {
+            console.log(`Robot skonczył po wykonaniu ${turn} ruch`);
+            break;
+        }
+        let action = robot(state, memory)
+        state = state.move(action.direction);
+
+        memory  =   action.memory;
+        console.log(`Robot przemieścił się do: ${action.direction}`);
+
+        
+    }
+}
+
+//random pick choice from array
+function radnomPick(array)
+{
+    let choice = Math.floor(Math.random()*array.length);
+    return array[choice];
+}
+
+//Robot Strategies:
+function randomRobot(state)
+{
+    return {direction: radnomPick(roadGraph[state.place])};
+}
+
+function routeRobot(state,memory)
+        {
+            if(memory.length ==0)
+            {
+                memory=mailRoute;
+            }
+            return {directin:memory[0], memory:memory.slice(1)};
+        }
+
+
+//Create random delivery schedule:
+VillageState.random = function(parcelCount = 5)
+{
+    let parcels = [];
+
+    for (let i=0; i < parcelCount; i++)
+    {
+        let adress = radnomPick(Object.keys(roadGraph));
+        let place;
+        do
+        {
+            place = radnomPick(Object.keys(roadGraph));
+        }while (place == adress);
+        parcels.push({place,adress});
+    }
+    randomVillage = new VillageState("Poczta", parcels);
+
+    console.log('Miejsca Dostaw:')
+    console.table(randomVillage.parcels);
+
+    return randomVillage;
+}
+
+
+const mailRoute = [
+    "Dom Alicji", "Chata", "Dom Alicji", "Dom Bartka",
+    "Ratusz", "Dom Darii", "Dom Erniego",
+    "Dom Grety", "Sklep", "Dom Grety", "Farma",
+    "Rynek", "Poczta"
+];
+
+
+//start Delivery:
+runRobot(VillageState.random(6), randomRobot);
+
